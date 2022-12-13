@@ -30,13 +30,12 @@ c.addEventListener("mouseup", e => {
     for(var button of buttons) {
         if(button.selected) {
             button.selected = false;
-            button.snapToGrid();
         }
     }
 })
 
-function addKey(){
-    buttons.push(new Item(100,100,50,50,document.getElementById("bubble").value,document.getElementById("lable").value));
+function addKey(width){
+    buttons.push(new Item(100,100,width,50,document.getElementById("bubble").value,document.getElementById("lable").value));
 }
 
 class Item {
@@ -94,9 +93,39 @@ class Item {
         }
         return false;
     }
-    snapToGrid(){
-        this.x = this.x - this.x % 15;
-        this.y = this.y - this.y % 15;
+}
+
+function snapYPos(buttons) {
+    for(var button of buttons){
+        button.y = button.y - button.y % 15;
+    }
+}
+function getRows(buttons){
+    var rows = {};
+    for(var button of buttons){
+        console.log(typeof button);
+        if(button.y in rows) {
+            rows[button.y].push(button);
+        } else {
+            rows[button.y] = [button];
+        }
+    }
+    return rows
+}
+function sortRowsByX(rows) {
+    for(var row in rows) {
+        rows[row].sort(function(a,b) {return a.x - b.x})
+    }
+}
+function snapXPos(rows) {
+    for(var row in rows) {
+        var rowStart = (rows[row][0].x - rows[row][0].width - 15) % 15;
+        for(var button of rows[row]) {
+            rowStart += button.width + 15;
+            if (!button.selected){
+                button.x = rowStart;
+            }
+        }
     }
 }
 
@@ -104,19 +133,27 @@ function loop(timestamp) {
 
     //Clear Screen
     ctx.clearRect(0, 0, screen.width, screen.height);
-  
-    for(var button of buttons) {
-        button.update();
-        button.draw();
-        button.update();
-    }
-    //seperate loop for the bubbles so that they are always drawn on top.
-    for(var button of buttons) {
-        button.drawBubble();
+
+    snapYPos(buttons);
+    var rows = getRows(buttons);
+    sortRowsByX(rows);
+    snapXPos(rows);
+
+    for(var row in rows) {
+        for(var button of rows[row]) {
+            button.draw();
+            button.update();
+        }
     }
 
+    for(var row in rows) {
+        for(var button of rows[row]) {
+            button.drawBubble();
+        }
+    }
 
-    document.querySelector("body > h1:nth-child(2)").innerText = mouseX + ", " + mouseY;
+    console.log("rows: " + rows);
+    console.log("butt: " + buttons[1]);
     
     window.requestAnimationFrame(loop);
 }
